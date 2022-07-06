@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class DecodeStep(object):
     '''
@@ -120,10 +121,10 @@ class DecodeStep(object):
                      decoder_inp,
                      context,
                      Env, 
-                     decoder_state)
+                     decoder_state) #確率，LSTMデコーダの更新された状態
 
-        logprob = tf.nn.log_softmax(logit)
-        prob = tf.exp(logprob)
+        logprob = tf.nn.log_softmax(logit)#確率のログ
+        prob = tf.exp(logprob)#次の場所への訪問確率
 
         return logit, prob, logprob, decoder_state
 
@@ -173,11 +174,11 @@ class RNNDecodeStep(DecodeStep):
 
         # build a multilayer LSTM cell
         single_cell = tf.nn.rnn_cell.BasicLSTMCell(hidden_dim, 
-            forget_bias=forget_bias)
+            forget_bias=forget_bias) #LSTMのネットワークセル
         self.dropout = tf.placeholder(tf.float32,name='decoder_rnn_dropout') 
-        single_cell = tf.contrib.rnn.DropoutWrapper(
-                cell=single_cell, input_keep_prob=(1.0 - self.dropout))
-        self.cell = tf.nn.rnn_cell.MultiRNNCell([single_cell] * rnn_layers)
+        single_cell = tf.nn.rnn_cell.DropoutWrapper(#tf.contrib.rnn.DropoutWrapper(
+                cell=single_cell, input_keep_prob=(1.0 - self.dropout)) #入力と出力にドロップアウトを追加
+        self.cell = tf.nn.rnn_cell.MultiRNNCell([single_cell] * rnn_layers) #複数のセルからRNNレイヤーを構成
 
     def get_logit_op(self,
                     decoder_inp,
