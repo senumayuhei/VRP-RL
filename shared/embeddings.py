@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class Embedding(object):
@@ -13,7 +13,7 @@ class Embedding(object):
         # returns the embeded tensor. Should be implemented in child classes
         pass
 
-class LinearEmbedding(Embedding):
+class LinearEmbedding(Embedding): #線形埋め込み
     '''
     This class implements linear embedding. It is only a mapping 
     to a higher dimensional space.
