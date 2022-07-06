@@ -2,7 +2,7 @@ import argparse
 import os
 import numpy as np
 from tqdm import tqdm 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import time
 
 from configs import ParseParams
@@ -38,7 +38,7 @@ def load_task_specific_components(task):
 def main(args, prt):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    sess = tf.Session(config=config) #計算処理実行の機構
 
     # load task specific classes
     DataGenerator, Env, reward_func, AttentionActor, AttentionCritic = \
@@ -91,13 +91,13 @@ def main(args, prt):
         time.strftime("%H:%M:%S", time.gmtime(time.time()-start_time))))
 
 if __name__ == "__main__":
-    args, prt = ParseParams()
+    args, prt = ParseParams() #変数初期設定
     # Random
     random_seed = args['random_seed']
     if random_seed is not None and random_seed > 0:
         prt.print_out("# Set random seed to %d" % random_seed)
         np.random.seed(random_seed)
-        tf.set_random_seed(random_seed)
-    tf.reset_default_graph()
+        tf.set_random_seed(random_seed) #グラフを作成する前に乱数シードを設定
+    tf.reset_default_graph() #グラフをリセット
 
     main(args, prt)
