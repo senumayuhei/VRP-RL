@@ -1,9 +1,10 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import os
 import warnings
 import collections
 
+tf.disable_eager_execution()
 
 def create_VRP_dataset(
         n_problems,
@@ -40,7 +41,7 @@ def create_VRP_dataset(
     # cteate/load data
     if os.path.exists(fname):
         print('Loading dataset for {}...'.format(task_name))
-        data = np.loadtxt(fname,delimiter=' ')
+        data = np.loadtxt(fname,delimiter=' ')#データを呼びだし
         data = data.reshape(-1, n_nodes,3)
     else:
         print('Creating dataset for {}...'.format(task_name))
@@ -75,7 +76,7 @@ class DataGenerator(object):
         # create test data
         self.n_problems = args['test_size']
         self.test_data = create_VRP_dataset(self.n_problems,args['n_cust'],'./data',
-            seed = args['random_seed']+1,data_type='test')
+            seed = args['random_seed']+1,data_type='test')#データセット作成
 
         self.reset()
 
@@ -145,8 +146,7 @@ class Env(object):
         self.n_cust = args['n_cust']
         self.input_dim = args['input_dim']
         self.input_data = tf.placeholder(tf.float32,\
-            shape=[None,self.n_nodes,self.input_dim])
-
+            shape=[None,self.n_nodes,self.input_dim]) #計算グラフ内の変数の入れ物
         self.input_pnt = self.input_data[:,:,:2]
         self.demand = self.input_data[:,:,-1]
         self.batch_size = tf.shape(self.input_pnt)[0] 
@@ -279,11 +279,11 @@ def reward_func(sample_solution):
     sample_solution = tf.stack(sample_solution,0)
 
     sample_solution_tilted = tf.concat((tf.expand_dims(sample_solution[-1],0),
-         sample_solution[:-1]),0)
+         sample_solution[:-1]),0)#テンソルを一次元に連結
     # get the reward based on the route lengths
 
-
+    #ルートの長さを報酬とする
     route_lens_decoded = tf.reduce_sum(tf.pow(tf.reduce_sum(tf.pow(\
-        (sample_solution_tilted - sample_solution) ,2), 2) , .5), 0)
+        (sample_solution_tilted - sample_solution) ,2), 2) , .5), 0)#テンソルの要素の合計を計算
     return route_lens_decoded 
 
