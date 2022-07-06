@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
 import time
 from shared.embeddings import LinearEmbedding
@@ -51,7 +51,7 @@ class RLAgent(object):
                         rnn_layers=args['rnn_layers'],
                         _scope='Actor/')
         self.decoder_input = tf.get_variable('decoder_input', [1,1,args['embedding_dim']],
-                       initializer=tf.contrib.layers.xavier_initializer())
+                       initializer=tf.truncated_normal_initializer())#tf.contrib.layers.xavier_initializer()) #デコーダの入力の変数を作成
 
         start_time  = time.time()
         if is_train:
@@ -78,7 +78,7 @@ class RLAgent(object):
         # input_pnt: [batch_size x max_time x 2]
         input_pnt = env.input_pnt
         # encoder_emb_inp: [batch_size, max_time, embedding_dim]
-        encoder_emb_inp = self.embedding(input_pnt)
+        encoder_emb_inp = self.embedding(input_pnt) #埋め込み処理
 
         if decode_type == 'greedy' or decode_type == 'stochastic':
             beam_width = 1
@@ -86,9 +86,9 @@ class RLAgent(object):
             beam_width = args['beam_width']
             
         # reset the env. The environment is modified to handle beam_search decoding.
-        env.reset(beam_width)
+        env.reset(beam_width) #環境をリセット
 
-        BatchSequence = tf.expand_dims(tf.cast(tf.range(batch_size*beam_width), tf.int64), 1)
+        BatchSequence = tf.expand_dims(tf.cast(tf.range(batch_size*beam_width), tf.int64), 1) #長さ1軸のテンソルを返す
 
 
         # create tensors and lists
@@ -98,15 +98,15 @@ class RLAgent(object):
         idxs = []
 
         # start from depot
-        idx = (env.n_nodes-1)*tf.ones([batch_size*beam_width,1])
-        action = tf.tile(input_pnt[:,env.n_nodes-1],[beam_width,1])
+        idx = (env.n_nodes-1)*tf.ones([batch_size*beam_width,1])#?
+        action = tf.tile(input_pnt[:,env.n_nodes-1],[beam_width,1]) #特定のテンソルをタイリング(繰り返し並べる)してテンソルを構築
 
 
         # decoder_state
         initial_state = tf.zeros([args['rnn_layers'], 2, batch_size*beam_width, args['hidden_dim']])
-        l = tf.unstack(initial_state, axis=0)
+        l = tf.unstack(initial_state, axis=0) #ランク R の Tensor の指定された次元で分割して、ランク (R-1) の Tensor のリストを生成
         decoder_state = tuple([tf.nn.rnn_cell.LSTMStateTuple(l[idx][0],l[idx][1])
-                  for idx in range(args['rnn_layers'])])            
+                  for idx in range(args['rnn_layers'])]) #LSTM セルで使用されるタプル，および 出力状態        
 
         # start from depot in VRP and from a trainable nodes in TSP
         # decoder_input: [batch_size*beam_width x 1 x hidden_dim]
@@ -132,9 +132,9 @@ class RLAgent(object):
             elif decode_type == 'stochastic':
                 # select stochastic actions. idx has shape [batch_size x 1]
                 # tf.multinomial sometimes gives numerical errors, so we use our multinomial :(
-                def my_multinomial():
-                    prob_idx = tf.stop_gradient(prob)
-                    prob_idx_cum = tf.cumsum(prob_idx,1)
+                def my_multinomial():#多項分布
+                    prob_idx = tf.stop_gradient(prob)#勾配計算停止
+                    prob_idx_cum = tf.cumsum(prob_idx,1)#累積和
                     rand_uni = tf.tile(tf.random_uniform([batch_size,1]),[1,env.n_nodes])
                     # sorted_ind : [[0,1,2,3..],[0,1,2,3..] , ]
                     sorted_ind = tf.cast(tf.tile(tf.expand_dims(tf.range(env.n_nodes),0),[batch_size,1]),tf.int64)
@@ -148,7 +148,7 @@ class RLAgent(object):
                 # check validity of tmp -> True or False -- True mean take a new sample
                 tmp_check = tf.cast(tf.reduce_sum(tf.cast(tf.greater(tf.reduce_sum(tmp,1),(10000*env.n_nodes)-1),
                                                           tf.int32)),tf.bool)
-                tmp , idx = tf.cond(tmp_check,my_multinomial,lambda:(tmp,idx))
+                tmp , idx = tf.cond(tmp_check,my_multinomial,lambda:(tmp,idx))#tmp_checkがTrueかどうかmy_multinomial,lambda:(tmp,idx)のいずれか
 
             elif decode_type == 'beam_search':
                 if i==0:
@@ -219,9 +219,9 @@ class RLAgent(object):
         R = self.reward_func(actions)            
 
         ### critic
-        v = tf.constant(0)
+        v = tf.constant(0)#価値関数
         if decode_type=='stochastic':
-            with tf.variable_scope("Critic"):
+            with tf.variable_scope("Critic"):#変数 (レイヤー) を作成する操作を定義
                 with tf.variable_scope("Encoder"):
                     # init states
                     initial_state = tf.zeros([args['rnn_layers'], 2, batch_size, args['hidden_dim']])
@@ -244,7 +244,7 @@ class RLAgent(object):
 
                 with tf.variable_scope("Linear"):
                     v = tf.squeeze(tf.layers.dense(tf.layers.dense(hy,args['hidden_dim']\
-                                                               ,tf.nn.relu,name='L1'),1,name='L2'),1)
+                                                               ,tf.nn.relu,name='L1'),1,name='L2'),1)#完全結合
 
 
         return (R, v, logprobs, actions, idxs, env.input_pnt , probs)
@@ -262,7 +262,7 @@ class RLAgent(object):
 
         # losses
         actor_loss = tf.reduce_mean(tf.multiply((R-v_nograd),tf.add_n(logprobs)),0)
-        critic_loss = tf.losses.mean_squared_error(R,v)
+        critic_loss = tf.losses.mean_squared_error(R,v)#平均二乗誤差
 
         # optimizers
         actor_optim = tf.train.AdamOptimizer(args['actor_net_lr'])
