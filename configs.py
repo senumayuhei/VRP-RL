@@ -6,7 +6,7 @@ from task_specific_params import task_lst
 def str2bool(v):
     return v.lower() in ('true', '1')
 
-def initialize_task_settings(args,task):
+def initialize_task_settings(args,task): 
 
     try:
         task_params = task_lst[task]
@@ -79,7 +79,7 @@ def ParseParams():
     parser.add_argument('--disable_tqdm', default=True, type=str2bool)
                         
     args, unknown = parser.parse_known_args()
-    args = vars(args)
+    args = vars(args) #インスタンスを辞書型で取得
 
     args['log_dir'] = "{}/{}-{}".format(args['log_dir'],args['task'], utils.get_time())
     if args['model_dir'] =='':
@@ -93,12 +93,12 @@ def ParseParams():
         pass
 
     # create a print handler
-    out_file = open(os.path.join(args['log_dir'], 'results.txt'),'w+') 
+    out_file = open(os.path.join(args['log_dir'], 'results.txt'),'w+')
     prt = utils.printOut(out_file,args['stdout_print'])
 
-    os.environ["CUDA_VISIBLE_DEVICES"]=  args['gpu'] 
+    os.environ["CUDA_VISIBLE_DEVICES"]=  args['gpu'] #環境変数を上書き
 
-    args = initialize_task_settings(args,args['task'])
+    args = initialize_task_settings(args,args['task']) #タスク初期化“vrp10”
 
     # print the run args
     for key, value in sorted(args.items()):
